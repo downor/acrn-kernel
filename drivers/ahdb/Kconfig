@@ -1,0 +1,30 @@
+menu "Intel AHDB-ACRN HyperDMABUF Sharing"
+
+config AHDB
+	bool "Enables Linux DMABUF sharing between ACRN SOS and UOS"
+	default y
+	depends on (X86_64=y)
+	help
+	  ACRN Hyper DMABUF driver enables UOS->SOS zero copy buffer
+          sharing.
+
+          Its primary use-case is graphic buffer sharing between
+          OSes running in ACRN hypervisor environment
+
+config AHDB_BE
+	bool "Build AHDB driver for Backend (SOS)"
+	default y
+	depends on AHDB
+	depends on ACRN
+	depends on ACRN_VHM
+	select VHOST
+	help
+          Buidling AHDB driver for Service OS (SOS).
+
+	  AHDB driver can be built for either service-OS or guest-OS. If
+	  built for SOS, this option needs to be turned on.
+
+	  With this option turned off, AHDB is automatically built for
+	  Guest-OS (UOS/FE).
+
+endmenu
