@@ -46,17 +46,6 @@
 /* one global drv_priv */
 struct ahdb_info *g_ahdb_info;
 
-/* place holders of functions for sharing/unsharing pages */
-struct shmem_info *ahdb_share_buf(struct page **pages, int nents)
-{
-	return NULL;
-}
-
-int ahdb_free_buf(struct shmem_info *shmem)
-{
-	return 0;
-}
-
 /* opening ahdb driver */
 static int ahdb_open(struct inode *inode, struct file *filp)
 {

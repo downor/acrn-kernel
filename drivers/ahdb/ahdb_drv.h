@@ -313,6 +313,16 @@ void remove_buf(struct ahdb_buf *exp, void *dummy);
 
 int ahdb_clear_buf(struct ahdb_buf *exp);
 
+#ifdef CONFIG_AHDB_BE
+/* PAGE in UOS host mapping/unmapping */
+struct shmem_info *ahdb_map(int vmid, long ref, int nents);
+int ahdb_unmap(struct shmem_info *shmem);
+#else
+/* Exporting/un-exporting PAGE information to the host (SOS) */
+struct shmem_info *ahdb_share_buf(struct page **pages, int nents);
+int ahdb_free_buf(struct shmem_info *shmem);
+#endif
+
 struct wait_for_resp {
 	int req_id;
 	int status;
@@ -335,8 +345,5 @@ extern int ahdb_exp_fd(struct ahdb_buf *imp, int flags);
 #else
 extern void rx_isr(struct virtqueue *vq);
 #endif
-
-/* place holder */
-extern int ahdb_unmap(struct shmem_info *shmem);
 
 #endif /* __ACRN_DRV_H__*/

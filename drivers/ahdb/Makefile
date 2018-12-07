@@ -1,4 +1,5 @@
 obj-y := ahdb_buflist.o \
+	 ahdb_shm.o
 
 # for ACRN Service OS
 ifeq ($(CONFIG_AHDB_BE), y)

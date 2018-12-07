@@ -44,17 +44,6 @@
 /* global driver information */
 struct ahdb_info *g_ahdb_info;
 
-/* place holders of ahdb_map and ahdb_unmap */
-struct shmem_info *ahdb_map(int vmid, long ref, int nents)
-{
-	return NULL;
-}
-
-int ahdb_unmap(struct shmem_info *shmem)
-{
-	return 0;
-}
-
 /* adding new virtual dev info to the hash */
 static int vdev_add(struct ahdb_vdev *new)
 {
