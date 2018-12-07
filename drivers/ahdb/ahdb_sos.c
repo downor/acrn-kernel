@@ -153,6 +153,139 @@ static int ahdb_release(struct inode *inode, struct file *filp)
 	return 0;
 }
 
+/* ahdb driver dev polling for event */
+static unsigned int ahdb_ep(struct file *filp,
+			    struct poll_table_struct *wait)
+{
+	struct ahdb_info *drv_info =
+		(struct ahdb_info *) filp->private_data;
+
+	if (drv_info->eq->pid != task_tgid_nr(current)) {
+		dev_err(drv_info->dev,
+			"current user process is not allowed to poll dev\n");
+		return -EINVAL;
+	}
+
+	poll_wait(filp, &drv_info->eq->e_wait, wait);
+
+	if (!list_empty(&drv_info->eq->e_list))
+		return POLLIN | POLLRDNORM;
+
+	return 0;
+}
+
+/* ahdb driver reading event information for new imported buffer */
+static ssize_t ahdb_e_read(struct file *filp, char __user *buf,
+			   size_t cnt, loff_t *ofst)
+{
+	struct ahdb_info *drv_info =
+		(struct ahdb_info *) filp->private_data;
+	int ret;
+
+	if (drv_info->eq->pid != task_tgid_nr(current)) {
+		dev_err(drv_info->dev,
+			"current user process is not allowed to read events\n");
+		return -EPERM;
+	}
+
+	/* only root can read events */
+	if (!capable(CAP_DAC_OVERRIDE)) {
+		dev_err(drv_info->dev, "only root can read events\n");
+		return -EPERM;
+	}
+
+	/* make sure user buffer can be written */
+	if (!access_ok(VERIFY_WRITE, buf, cnt)) {
+		dev_err(drv_info->dev, "user buffer can't be written.\n");
+		return -EINVAL;
+	}
+
+	ret = mutex_lock_interruptible(&drv_info->eq->e_readlock);
+	if (ret)
+		return ret;
+
+	for (;;) {
+		struct ahdb_event *e = NULL;
+
+		spin_lock_irq(&drv_info->eq->e_lock);
+		if (!list_empty(&drv_info->eq->e_list)) {
+			e = list_first_entry(&drv_info->eq->e_list,
+					     struct ahdb_event, link);
+			list_del(&e->link);
+		}
+		spin_unlock_irq(&drv_info->eq->e_lock);
+
+		if (!e) {
+			if (ret)
+				break;
+
+			if (filp->f_flags & O_NONBLOCK) {
+				ret = -EAGAIN;
+				break;
+			}
+
+			mutex_unlock(&drv_info->eq->e_readlock);
+			ret = wait_event_interruptible(drv_info->eq->e_wait,
+					!list_empty(&drv_info->eq->e_list));
+
+			if (ret == 0)
+				ret = mutex_lock_interruptible(
+						&drv_info->eq->e_readlock);
+
+			if (ret)
+				return ret;
+		} else {
+			unsigned int len = (sizeof(e->e_data.hdr) +
+					    e->e_data.hdr.size);
+
+			if (len > cnt - ret) {
+put_back_event:
+				spin_lock_irq(&drv_info->eq->e_lock);
+				list_add(&e->link, &drv_info->eq->e_list);
+				spin_unlock_irq(&drv_info->eq->e_lock);
+				break;
+			}
+
+			if (copy_to_user(buf + ret, &e->e_data.hdr,
+					 sizeof(e->e_data.hdr))) {
+				if (ret == 0)
+					ret = -EFAULT;
+
+				goto put_back_event;
+			}
+
+			ret += sizeof(e->e_data.hdr);
+
+			if (copy_to_user(buf + ret, e->e_data.data,
+					 e->e_data.hdr.size)) {
+				/* error while copying void *data */
+
+				struct ahdb_e_hdr dummy_hdr = {0};
+
+				ret -= sizeof(e->e_data.hdr);
+
+				/* nullifying hdr of the event in user buffer */
+				if (copy_to_user(buf + ret, &dummy_hdr,
+						 sizeof(dummy_hdr)))
+					dev_err(drv_info->dev,
+					   "fail to nullify invalid hdr\n");
+
+				ret = -EFAULT;
+
+				goto put_back_event;
+			}
+
+			ret += e->e_data.hdr.size;
+			drv_info->eq->pending--;
+			kfree(e);
+		}
+	}
+
+	mutex_unlock(&drv_info->eq->e_readlock);
+
+	return ret;
+}
+
 /* vhost interface owner reset */
 static long vhost_reset_owner(struct ahdb_vdev *vdev)
 {
@@ -218,6 +351,29 @@ static int vhost_ioctl(struct file *filp, unsigned int cmd,
 	}
 
 	return ret;
+}
+
+/*
+ * ioctl - set pid of user process that will manage import events
+ */
+static int set_e_reader_ioctl(struct file *filp, void *data)
+{
+	struct ahdb_info *drv_info =
+		(struct ahdb_info *) filp->private_data;
+
+	mutex_lock(&drv_info->eq->e_readlock);
+
+	/* only process with this pid will be able to read from
+	 * event queue
+	 */
+	drv_info->eq->pid = task_tgid_nr(current);
+	dev_info(drv_info->dev,
+		 "new event reader: user process with id = %d\n",
+		 drv_info->eq->pid);
+
+	mutex_unlock(&drv_info->eq->e_readlock);
+
+	return 0;
 }
 
 /*
@@ -311,6 +467,7 @@ success:
 }
 
 static const struct ahdb_ioctl_desc ahdb_ioctls[] = {
+	AHDB_IOCTL_DEF(IOCTL_SET_EVENT_READER, set_e_reader_ioctl, 0),
 	AHDB_IOCTL_DEF(IOCTL_IMPORT, import_ioctl, 0),
 };
 
@@ -381,6 +538,8 @@ static const struct file_operations ahdb_fops = {
 	.owner = THIS_MODULE,
 	.open = ahdb_open,
 	.release = ahdb_release,
+	.read = ahdb_e_read,
+	.poll = ahdb_ep,
 	.unlocked_ioctl = ahdb_ioctl,
 };
 
@@ -422,6 +581,23 @@ static int __init init(void)
 	if (ret < 0)
 		dev_err(g_ahdb_info->dev, "failed to initialize sysfs\n");
 
+	g_ahdb_info->eq = kcalloc(1, sizeof(*g_ahdb_info->eq), GFP_KERNEL);
+	if (!g_ahdb_info->eq) {
+		misc_deregister(&ahdb_miscdev);
+		kfree(g_ahdb_info);
+		return -ENOMEM;
+	}
+
+	mutex_init(&g_ahdb_info->eq->e_readlock);
+	spin_lock_init(&g_ahdb_info->eq->e_lock);
+
+	/* Initialize event queue */
+	INIT_LIST_HEAD(&g_ahdb_info->eq->e_list);
+	init_waitqueue_head(&g_ahdb_info->eq->e_wait);
+
+	/* resetting number of pending events */
+	g_ahdb_info->eq->pending = 0;
+
 	g_ahdb_info->wq = create_workqueue("ahdb_wq");
 	hash_init(g_ahdb_info->vdev_list);
 	hash_init(g_ahdb_info->buf_list);
@@ -436,6 +612,9 @@ static int __init init(void)
 
 static void __exit fini(void)
 {
+	struct ahdb_event *e, *et;
+	unsigned long irqflags;
+
 	dev_info(g_ahdb_info->dev, "unregister_device() is called\n");
 
 	mutex_lock(&g_ahdb_info->g_mutex);
@@ -445,6 +624,22 @@ static void __exit fini(void)
 	/* destroy workqueue */
 	if (g_ahdb_info->wq)
 		destroy_workqueue(g_ahdb_info->wq);
+
+	/* clean up event queue */
+	spin_lock_irqsave(&g_ahdb_info->eq->e_lock, irqflags);
+
+	list_for_each_entry_safe(e, et, &g_ahdb_info->eq->e_list,
+				 link) {
+		list_del(&e->link);
+		kfree(e);
+		g_ahdb_info->eq->pending--;
+	}
+
+	if (g_ahdb_info->eq->pending)
+		dev_err(g_ahdb_info->dev, "possible leak on the e_list\n");
+
+	spin_unlock_irqrestore(&g_ahdb_info->eq->e_lock, irqflags);
+
 
 	/* remove all connection with UOSes */
 	vdev_del_all();

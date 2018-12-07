@@ -92,6 +92,28 @@ struct ahdb_buf {
 	struct hlist_node node;
 };
 
+#ifdef CONFIG_AHDB_BE
+struct ahdb_event {
+	struct ahdb_e_data e_data;
+	struct list_head link;
+};
+
+struct ahdb_eq {
+	/* event handling */
+	wait_queue_head_t e_wait;
+	struct list_head e_list;
+
+	spinlock_t e_lock;
+	struct mutex e_readlock;
+
+	/* process id of dedicated user app that reads events */
+	pid_t pid;
+
+	/* # of pending events */
+	int pending;
+};
+#endif
+
 /* long message is only used for exporting */
 struct ahdb_msg_long {
 	unsigned int req_id;
@@ -145,6 +167,9 @@ struct ahdb_info {
 	struct device *dev;
 
 #ifdef CONFIG_AHDB_BE
+	/* event queue - imported */
+	struct ahdb_eq *eq;
+
 	/* max 16 ahdb virtio clients */
 	DECLARE_HASHTABLE(vdev_list, 4);
 #else

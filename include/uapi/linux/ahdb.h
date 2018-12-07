@@ -35,6 +35,22 @@ typedef struct {
 	int rng_key[3];
 } ahdb_buf_id_t;
 
+struct ahdb_e_hdr {
+	/* hid of new buf */
+	ahdb_buf_id_t hid;
+	/* size of private data */
+	int size;
+};
+
+struct ahdb_e_data {
+	struct ahdb_e_hdr hdr;
+	/* ptr to private data */
+	void __user *data;
+};
+
+#define IOCTL_SET_EVENT_READER \
+_IOC(_IOC_NONE, 'G', 2, 0)
+
 #define IOCTL_IMPORT \
 _IOC(_IOC_NONE, 'G', 3, sizeof(struct ioctl_ahdb_import))
 struct ioctl_ahdb_import {

@@ -91,6 +91,44 @@ static int pend_msg_del(int req_id)
 	return -1;
 }
 
+/* event triggering for new HyperDMABUF */
+static int add_event_newbuf(struct ahdb_buf *buf_info)
+{
+	struct ahdb_event *e_oldest, *e_new;
+	struct ahdb_eq *eq = g_ahdb_info->eq;
+	unsigned long irqflags;
+
+	e_new = kzalloc(sizeof(*e_new), GFP_KERNEL);
+	if (!e_new)
+		return -ENOMEM;
+
+	e_new->e_data.hdr.hid = buf_info->hid;
+	e_new->e_data.data = (void *)buf_info->priv;
+	e_new->e_data.hdr.size = buf_info->sz_priv;
+
+	spin_lock_irqsave(&eq->e_lock, irqflags);
+
+	/* check current number of event then if it hits the max num (32)
+	 * then remove the oldest event in the list
+	 */
+	if (eq->pending > 31) {
+		e_oldest = list_first_entry(&eq->e_list,
+					    struct ahdb_event, link);
+		list_del(&e_oldest->link);
+		eq->pending--;
+		kfree(e_oldest);
+	}
+
+	list_add_tail(&e_new->link, &eq->e_list);
+
+	eq->pending++;
+
+	wake_up_interruptible(&eq->e_wait);
+	spin_unlock_irqrestore(&eq->e_lock, irqflags);
+
+	return 0;
+}
+
 /* transmitting message */
 int send_msg(int vmid, enum ahdb_cmd cmd, int *op)
 {
@@ -232,6 +270,9 @@ static int reg_exported(ahdb_buf_id_t hid, int *ops)
 skip_shmem:
 	/* transferring private data */
 	memcpy(imp->priv, &ops[10], ops[9]);
+
+	/* generating import event */
+	add_event_newbuf(imp);
 
 	return 0;
 }
