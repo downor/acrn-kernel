@@ -313,6 +313,12 @@ void remove_buf(struct ahdb_buf *exp, void *dummy);
 
 int ahdb_clear_buf(struct ahdb_buf *exp);
 
+/* initialize sysfs */
+int ahdb_init_sysfs(struct device *dev);
+
+/* remove sysfs */
+int ahdb_remove_sysfs(struct device *dev);
+
 #ifdef CONFIG_AHDB_BE
 /* PAGE in UOS host mapping/unmapping */
 struct shmem_info *ahdb_map(int vmid, long ref, int nents);

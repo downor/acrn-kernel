@@ -112,3 +112,47 @@ void ahdb_foreachbuf(void (*func)(struct ahdb_buf *, void *),
 	hash_for_each_safe(g_ahdb_info->buf_list, bkt, tmp, found, node)
 		func(found, param);
 }
+
+static ssize_t shared_list_show(struct device *dev,
+			  struct device_attribute *attr,
+			  char *buf)
+{
+	struct ahdb_buf *buf_info;
+	int bkt;
+	ssize_t count = 0;
+	size_t total = 0;
+
+	hash_for_each(g_ahdb_info->buf_list, bkt, buf_info, node) {
+		ahdb_buf_id_t hid = buf_info->hid;
+
+		total += buf_info->nents;
+		count += scnprintf(buf + count, PAGE_SIZE - count,
+			"SRC-VM:%d | id:%d | #pg:%d | valid:%d | imped?:%d\n",
+			AHDB_VMID(hid), hid.id, buf_info->nents,
+			buf_info->valid, buf_info->imported);
+	}
+
+	count += scnprintf(buf + count, PAGE_SIZE - count,
+			   "total num of pages: %lu (%ld Bytes)\n",
+			   total, total * PAGE_SIZE);
+
+	return count;
+}
+
+static DEVICE_ATTR(shared_list, 0444, shared_list_show, NULL);
+
+/* adding sysfs */
+int ahdb_init_sysfs(struct device *dev)
+{
+	if (device_create_file(dev, &dev_attr_shared_list) < 0)
+		return -1;
+
+	return 0;
+}
+
+/* removing sysfs */
+int ahdb_remove_sysfs(struct device *dev)
+{
+	device_remove_file(dev, &dev_attr_shared_list);
+	return 0;
+}

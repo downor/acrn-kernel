@@ -719,6 +719,10 @@ static int __init init(void)
 	mutex_init(&g_ahdb_info->g_mutex);
 	mutex_lock(&g_ahdb_info->g_mutex);
 
+	ret = ahdb_init_sysfs(g_ahdb_info->dev);
+	if (ret < 0)
+		dev_err(g_ahdb_info->dev, "failed to initialize sysfs\n");
+
 	hash_init(g_ahdb_info->buf_list);
 	hash_init(g_ahdb_info->pending_reqs);
 
@@ -743,10 +747,11 @@ static int __init init(void)
 static void __exit fini(void)
 {
 	dev_info(g_ahdb_info->dev, "unregister_device() is called\n");
-	misc_deregister(&ahdb_miscdev);
 
 	mutex_lock(&g_ahdb_info->g_mutex);
 
+	misc_deregister(&ahdb_miscdev);
+	ahdb_remove_sysfs(g_ahdb_info->dev);
 	unregister_virtio_driver(&ahdb_vdev_drv);
 
 	if (g_ahdb_info->wq)

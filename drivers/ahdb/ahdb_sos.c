@@ -418,6 +418,10 @@ static int __init init(void)
 
 	mutex_init(&g_ahdb_info->g_mutex);
 
+	ret = ahdb_init_sysfs(g_ahdb_info->dev);
+	if (ret < 0)
+		dev_err(g_ahdb_info->dev, "failed to initialize sysfs\n");
+
 	g_ahdb_info->wq = create_workqueue("ahdb_wq");
 	hash_init(g_ahdb_info->vdev_list);
 	hash_init(g_ahdb_info->buf_list);
@@ -433,9 +437,10 @@ static int __init init(void)
 static void __exit fini(void)
 {
 	dev_info(g_ahdb_info->dev, "unregister_device() is called\n");
-	misc_deregister(&ahdb_miscdev);
 
 	mutex_lock(&g_ahdb_info->g_mutex);
+	misc_deregister(&ahdb_miscdev);
+	ahdb_remove_sysfs(g_ahdb_info->dev);
 
 	/* destroy workqueue */
 	if (g_ahdb_info->wq)
