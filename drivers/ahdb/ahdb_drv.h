@@ -92,6 +92,7 @@ struct ahdb_buf {
 	struct hlist_node node;
 };
 
+/* long message is only used for exporting */
 struct ahdb_msg_long {
 	unsigned int req_id;
 	unsigned int stat;
@@ -106,6 +107,7 @@ struct ahdb_msg_short {
 	unsigned int op[5];
 };
 
+#ifdef CONFIG_AHDB_BE
 struct txmsg {
 	struct ahdb_msg_short msg;
 	void __user *msg_ptr;
@@ -131,13 +133,27 @@ struct ahdb_vdev {
 
 struct ahdb_vdev *vdev_find(int client_id);
 
+#else
+struct list_used_id {
+	int id;
+	struct list_head list;
+};
+#endif
+
 /* driver information */
 struct ahdb_info {
 	struct device *dev;
 
+#ifdef CONFIG_AHDB_BE
 	/* max 16 ahdb virtio clients */
 	DECLARE_HASHTABLE(vdev_list, 4);
-
+#else
+	struct virtio_device *vdev;
+	struct virtqueue *vq;
+	spinlock_t vq_lock;
+	struct list_used_id *used_ids;
+	int vmid;
+#endif
 	/* workqueue dedicated to AHDB */
 	struct workqueue_struct *wq;
 
@@ -170,6 +186,28 @@ struct ahdb_ioctl_desc {
 }
 
 #define AHDB_VMID(hid) (((hid.id) >> 24) & 0xFF)
+
+#ifndef CONFIG_AHDB_BE
+
+/* ACRN HYPER_DMABUF IDs */
+#define AHDB_BUF_ID_CREATE(domid, cnt) ((((domid) & 0xFF) << 24) | \
+				       ((cnt) & 0xFFFFFF))
+
+/* currently maximum number of buffers shared
+ * at any given moment is limited to 1000
+ */
+#define AHDB_MAX_ID 1000
+
+/* adding freed hid to the reusable list */
+void add_used_id(int id);
+
+/* freeing the reusasble list */
+void free_used_ids_all(void);
+
+/* getting a hid available to use. */
+ahdb_buf_id_t get_hid(void);
+
+#endif
 
 /* Messages between Host and Client */
 
@@ -288,10 +326,15 @@ void tx_work(struct vhost_work *work);
 int send_msg(int vmid, enum ahdb_cmd cmd, int *op);
 
 /* externs */
+
 extern struct ahdb_info *g_ahdb_info;
 
+#ifdef CONFIG_AHDB_BE
 extern void rx_work(struct vhost_work *work);
 extern int ahdb_exp_fd(struct ahdb_buf *imp, int flags);
+#else
+extern void rx_isr(struct virtqueue *vq);
+#endif
 
 /* place holder */
 extern int ahdb_unmap(struct shmem_info *shmem);
