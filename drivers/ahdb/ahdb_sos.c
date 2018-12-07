@@ -466,9 +466,88 @@ success:
 	return ret;
 }
 
+/*
+ * ioctl - querying various information of HyperDMABUF
+ *
+ * user parameters:
+ *
+ *	ahdb_buf_id_t hid - HyperDMABUF ID of imported buffer
+ *	int item - querying topic
+ *	unsigned long info - returned querying result
+ *
+ */
+static int query_ioctl(struct file *filp, void *data)
+{
+	struct ioctl_ahdb_query *attr =
+			(struct ioctl_ahdb_query *)data;
+	struct ahdb_buf *imp;
+	int ret = 0;
+	ahdb_buf_id_t hid = attr->hid;
+
+	/* query for imported dmabuf */
+	imp = ahdb_findbuf(hid);
+	if (!imp)
+		return -EINVAL;
+
+	switch (attr->item) {
+	/* size of dmabuf in byte */
+	case AHDB_QUERY_SIZE:
+		if (imp->dma_buf) {
+			/* if local dma_buf is created (if it's
+			 * ever mapped), retrieve it directly
+			 * from struct dma_buf *
+			 */
+			attr->info = imp->dma_buf->size;
+		} else {
+			/* calcuate it from given nents, frst_ofst
+			 * and last_len
+			 */
+			attr->info = ((imp->nents)*PAGE_SIZE -
+				     (imp->frst_ofst) - PAGE_SIZE +
+				     (imp->last_len));
+		}
+		break;
+
+	/* whether the buffer is used or not */
+	case AHDB_QUERY_BUSY:
+		/* checks if it's used by importer */
+		attr->info = imp->imported;
+		break;
+
+	/* whether the buffer is unexported */
+	case AHDB_QUERY_UNEXPORTED:
+		attr->info = !imp->valid;
+		break;
+
+	/* size of private info attached to buffer */
+	case AHDB_QUERY_PRIV_INFO_SIZE:
+		attr->info = imp->sz_priv;
+		break;
+
+	/* copy private info attached to buffer */
+	case AHDB_QUERY_PRIV_INFO:
+		if (imp->sz_priv > 0) {
+			int n;
+
+			n = copy_to_user((void __user *)attr->info,
+					imp->priv,
+					imp->sz_priv);
+			if (n != 0)
+				return -EINVAL;
+		}
+		break;
+
+	default:
+		return -EINVAL;
+	}
+
+	return ret;
+}
+
 static const struct ahdb_ioctl_desc ahdb_ioctls[] = {
 	AHDB_IOCTL_DEF(IOCTL_SET_EVENT_READER, set_e_reader_ioctl, 0),
 	AHDB_IOCTL_DEF(IOCTL_IMPORT, import_ioctl, 0),
+	AHDB_IOCTL_DEF(IOCTL_QUERY, query_ioctl, 0),
 };
 
 /* entry point of AHDB ioctl */

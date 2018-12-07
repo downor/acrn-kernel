@@ -106,4 +106,27 @@ struct ioctl_ahdb_unexport {
 	int stat;
 };
 
+#define IOCTL_QUERY \
+_IOC(_IOC_NONE, 'G', 8, sizeof(struct ioctl_ahdb_query))
+struct ioctl_ahdb_query {
+	/* in parameters */
+	/* id of buf to be queried */
+	ahdb_buf_id_t hid;
+	/* item to be queried */
+	int item;
+	/* OUT parameters */
+	/* Value of queried item */
+	unsigned long info;
+};
+
+/* DMABUF query */
+enum ahdb_query {
+	AHDB_QUERY_SIZE = 0x10,
+	AHDB_QUERY_BUSY,
+	AHDB_QUERY_UNEXPORTED,
+	AHDB_QUERY_DELAYED_UNEXPORTED,
+	AHDB_QUERY_PRIV_INFO_SIZE,
+	AHDB_QUERY_PRIV_INFO,
+};
+
 #endif //__LINUX_PUBLIC_AHDB_H__

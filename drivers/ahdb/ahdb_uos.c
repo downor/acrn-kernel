@@ -504,9 +504,76 @@ static void force_free(struct ahdb_buf *info, void *param)
 	}
 }
 
+/* ioctl - querying various information of HyperDMABUF
+ *
+ * user parameters:
+ *
+ *	ahdb_buf_id_t hid - HyperDMABUF ID of exported buffer
+ *	int item - querying topic
+ *	unsigned long info - returned querying result
+ *
+ */
+static int query_ioctl(struct file *filp, void *data)
+{
+	struct ioctl_ahdb_query *attr =
+			(struct ioctl_ahdb_query *)data;
+	struct ahdb_buf *exp;
+
+	/* query for imported dmabuf */
+	exp = ahdb_findbuf(attr->hid);
+
+	if (!exp)
+		return -ENOENT;
+
+	switch (attr->item) {
+	/* size of dmabuf in byte */
+	case AHDB_QUERY_SIZE:
+		attr->info = exp->dma_buf->size;
+		break;
+
+	/* whether the buffer is used by importer */
+	case AHDB_QUERY_BUSY:
+		attr->info = exp->imported;
+		break;
+
+	/* whether the buffer is unexported */
+	case AHDB_QUERY_UNEXPORTED:
+		attr->info = !exp->valid;
+		break;
+
+	/* whether the buffer is scheduled to be unexported */
+	case AHDB_QUERY_DELAYED_UNEXPORTED:
+		attr->info = !exp->unexp_sched;
+		break;
+
+	/* size of private info attached to buffer */
+	case AHDB_QUERY_PRIV_INFO_SIZE:
+		attr->info = exp->sz_priv;
+		break;
+
+	/* copy private info attached to buffer */
+	case AHDB_QUERY_PRIV_INFO:
+		if (exp->sz_priv > 0) {
+			int n;
+
+			n = copy_to_user((void __user *) attr->info,
+					exp->priv, exp->sz_priv);
+			if (n != 0)
+				return -EINVAL;
+		}
+		break;
+
+	default:
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 static const struct ahdb_ioctl_desc ahdb_ioctls[] = {
 	AHDB_IOCTL_DEF(IOCTL_EXPORT, export_ioctl, 0),
 	AHDB_IOCTL_DEF(IOCTL_UNEXPORT, unexport_ioctl, 0),
+	AHDB_IOCTL_DEF(IOCTL_QUERY, query_ioctl, 0),
 };
 
 long ahdb_ioctl(struct file *filp, unsigned int cmd,
