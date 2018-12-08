@@ -153,10 +153,82 @@ static void ahdb_ops_release(struct dma_buf *dma_buf)
 	}
 }
 
+static void *ahdb_ops_kmap(struct dma_buf *dmabuf, unsigned long pgnum)
+{
+	struct ahdb_buf *imp;
+	struct scatterlist *sgl;
+	struct page *page;
+	int i;
+
+	if (!dmabuf->priv)
+		return NULL;
+
+	imp = (struct ahdb_buf *)dmabuf->priv;
+	if (!imp->sgt)
+		return NULL;
+
+	sgl = imp->sgt->sgl;
+	for (i = 0; i < pgnum; i++)
+		sgl = sg_next(sgl);
+
+	page = sg_page(sgl);
+
+	return page;
+}
+
+static int ahdb_ops_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
+{
+	struct ahdb_buf *imp;
+	unsigned long uaddr;
+	int i, err;
+
+	if (!dmabuf->priv)
+		return -EINVAL;
+
+	imp = (struct ahdb_buf *)dmabuf->priv;
+
+	if (!imp->shmem)
+		return -EINVAL;
+
+	vma->vm_flags |= VM_DONTEXPAND | VM_DONTDUMP;
+
+	uaddr = vma->vm_start;
+	for (i = 0; i < imp->nents; i++) {
+		err = vm_insert_page(vma, uaddr, imp->shmem->pages[i]);
+		if (err)
+			return err;
+
+		uaddr += PAGE_SIZE;
+	}
+
+	return 0;
+}
+
+static void *ahdb_ops_vmap(struct dma_buf *dmabuf)
+{
+	struct ahdb_buf *imp;
+	void *addr;
+
+	if (!dmabuf->priv)
+		return NULL;
+
+	imp = (struct ahdb_buf *)dmabuf->priv;
+
+	if (!imp->shmem)
+		return NULL;
+
+	addr = vmap(imp->shmem->pages, imp->nents, 0, PAGE_KERNEL);
+
+	return addr;
+}
+
 static const struct dma_buf_ops ahdb_dmabuf_ops = {
 	.map_dma_buf = ahdb_ops_map,
 	.unmap_dma_buf = ahdb_ops_unmap,
 	.release = ahdb_ops_release,
+	.map = ahdb_ops_kmap,
+	.mmap = ahdb_ops_mmap,
+	.vmap = ahdb_ops_vmap,
 };
 
 /* exporting dmabuf as fd */
