@@ -201,7 +201,12 @@ put_back_event:
 			}
 
 			ret += e->event_data.hdr.size;
+
+			spin_lock_irq(&hy_drv_priv->event_lock);
 			hy_drv_priv->pending--;
+			dev_dbg(hy_drv_priv->dev, "reading event, hid:%x\n", e->event_data.hdr.hid.id);
+			spin_unlock_irq(&hy_drv_priv->event_lock);
+
 			kfree(e);
 		}
 	}
