@@ -129,7 +129,8 @@ struct imported_sgt_info {
 
 	void *refs_info;
 	bool valid;
-	int importers;
+	bool importers;
+	struct mutex lock;
 
 	/* size of private */
 	size_t sz_priv;

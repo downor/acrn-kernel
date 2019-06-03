@@ -448,7 +448,6 @@ static int hyper_dmabuf_export_fd_ioctl(struct file *filp, void *data)
 				export_fd_attr->hid.rng_key[1], export_fd_attr->hid.rng_key[2]);
 
 	mutex_lock(&hy_drv_priv->lock);
-
 	/* look for dmabuf for the id */
 	imported = hyper_dmabuf_find_imported(export_fd_attr->hid);
 
@@ -460,10 +459,12 @@ static int hyper_dmabuf_export_fd_ioctl(struct file *filp, void *data)
 		return -ENOENT;
 	}
 
+	mutex_lock(&imported->lock);
+	mutex_unlock(&hy_drv_priv->lock);
 
 	if (imported->dma_buf && dmabuf_refcount(imported->dma_buf)) {
 		if (IS_ERR(imported->dma_buf)) {
-			mutex_unlock(&hy_drv_priv->lock);
+			mutex_unlock(&imported->lock);
 			dev_err(hy_drv_priv->dev,
 				"Buffer is invalid {id:%x key:%x %x %x}, cannot import\n",
 				imported->hid.id, imported->hid.rng_key[0],
@@ -472,7 +473,7 @@ static int hyper_dmabuf_export_fd_ioctl(struct file *filp, void *data)
 		}
 
 		if (imported->valid == false) {
-			mutex_unlock(&hy_drv_priv->lock);
+			mutex_unlock(&imported->lock);
 			dev_err(hy_drv_priv->dev,
 				"Buffer is released {id:%x key:%x %x %x}, cannot import\n",
 				imported->hid.id, imported->hid.rng_key[0],
@@ -482,7 +483,7 @@ static int hyper_dmabuf_export_fd_ioctl(struct file *filp, void *data)
 		get_dma_buf(imported->dma_buf);
 		export_fd_attr->fd = dma_buf_fd(imported->dma_buf,
 						export_fd_attr->flags);
-		mutex_unlock(&hy_drv_priv->lock);
+		mutex_unlock(&imported->lock);
 
 		dev_dbg(hy_drv_priv->dev, "%s exit {id:%x key:%x %x %x}\n", __func__,
 				export_fd_attr->hid.id, export_fd_attr->hid.rng_key[0],
@@ -490,7 +491,8 @@ static int hyper_dmabuf_export_fd_ioctl(struct file *filp, void *data)
 		return 0;
 	}
 
-	imported->importers++;
+	if (imported->importers != 0)
+		dev_warn(hy_drv_priv->dev, "%s, this was imported before.. Possible error\n", __func__);
 
 	/* send notification for export_fd to exporter */
 	op[0] = imported->hid.id;
@@ -498,14 +500,10 @@ static int hyper_dmabuf_export_fd_ioctl(struct file *filp, void *data)
 	for (i = 0; i < 3; i++)
 		op[i+1] = imported->hid.rng_key[i];
 
-	dev_dbg(hy_drv_priv->dev, "Export FD of buffer {id:%x key:%x %x %x}\n",
-		imported->hid.id, imported->hid.rng_key[0],
-		imported->hid.rng_key[1], imported->hid.rng_key[2]);
-
 	req = kcalloc(1, sizeof(*req), GFP_KERNEL);
 
 	if (!req) {
-		mutex_unlock(&hy_drv_priv->lock);
+		mutex_unlock(&imported->lock);
 		return -ENOMEM;
 	}
 
@@ -523,8 +521,7 @@ static int hyper_dmabuf_export_fd_ioctl(struct file *filp, void *data)
 		kfree(req);
 		dev_err(hy_drv_priv->dev,
 			"Failed to create sgt or notify exporter\n");
-		imported->importers--;
-		mutex_unlock(&hy_drv_priv->lock);
+		mutex_unlock(&imported->lock);
 		return ret;
 	}
 
@@ -536,21 +533,11 @@ static int hyper_dmabuf_export_fd_ioctl(struct file *filp, void *data)
 			imported->hid.id, imported->hid.rng_key[0],
 			imported->hid.rng_key[1], imported->hid.rng_key[2]);
 
-		imported->importers--;
-		mutex_unlock(&hy_drv_priv->lock);
+		mutex_unlock(&imported->lock);
 		return -EINVAL;
 	}
 
 	ret = 0;
-
-	dev_dbg(hy_drv_priv->dev,
-		"Found buffer gref 0x%lx off %d\n",
-		imported->ref_handle, imported->frst_ofst);
-
-	dev_dbg(hy_drv_priv->dev,
-		"last len %d nents %d domain %d\n",
-		imported->last_len, imported->nents,
-		HYPER_DMABUF_DOM_ID(imported->hid));
 
 	if (!imported->sgt) {
 		dev_dbg(hy_drv_priv->dev,
@@ -570,12 +557,10 @@ static int hyper_dmabuf_export_fd_ioctl(struct file *filp, void *data)
 				imported->hid.rng_key[1],
 				imported->hid.rng_key[2]);
 
-			imported->importers--;
-
 			req = kcalloc(1, sizeof(*req), GFP_KERNEL);
 
 			if (!req) {
-				mutex_unlock(&hy_drv_priv->lock);
+				mutex_unlock(&imported->lock);
 				return -ENOMEM;
 			}
 
@@ -585,7 +570,7 @@ static int hyper_dmabuf_export_fd_ioctl(struct file *filp, void *data)
 			bknd_ops->send_req(HYPER_DMABUF_DOM_ID(imported->hid), req,
 							  false);
 			kfree(req);
-			mutex_unlock(&hy_drv_priv->lock);
+			mutex_unlock(&imported->lock);
 			return -EINVAL;
 		}
 
@@ -604,7 +589,8 @@ static int hyper_dmabuf_export_fd_ioctl(struct file *filp, void *data)
 		ret = export_fd_attr->fd;
 	}
 
-	mutex_unlock(&hy_drv_priv->lock);
+	imported->importers = true;
+	mutex_unlock(&imported->lock);
 
 	dev_dbg(hy_drv_priv->dev, "%s exit {id:%x key:%x %x %x}\n", __func__,
 				export_fd_attr->hid.id, export_fd_attr->hid.rng_key[0],
