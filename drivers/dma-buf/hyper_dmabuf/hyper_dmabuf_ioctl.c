@@ -670,7 +670,7 @@ static void delayed_unexport(struct work_struct *work)
 		hyper_dmabuf_remove_exported(exported->hid);
 
 		/* register hyper_dmabuf_id to the list for reuse */
-		hyper_dmabuf_store_hid(exported->hid);
+		hyper_dmabuf_store_id(exported->hid.id);
 
 		if (exported->sz_priv > 0 && !exported->priv)
 			kfree(exported->priv);

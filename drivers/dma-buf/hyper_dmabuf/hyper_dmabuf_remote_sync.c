@@ -189,7 +189,7 @@ int hyper_dmabuf_remote_sync(hyper_dmabuf_id_t hid, int ops)
 			hyper_dmabuf_remove_exported(hid);
 			kfree(exported);
 			/* store hyper_dmabuf_id in the list for reuse */
-			hyper_dmabuf_store_hid(hid);
+			hyper_dmabuf_store_id(hid.id);
 		}
 		mutex_unlock(&hy_drv_priv->lock);
 
