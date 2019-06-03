@@ -32,7 +32,7 @@
 #include "hyper_dmabuf_drv.h"
 #include "hyper_dmabuf_id.h"
 
-void hyper_dmabuf_store_hid(hyper_dmabuf_id_t hid)
+void hyper_dmabuf_store_id(int id)
 {
 	struct list_reusable_id *reusable_head = hy_drv_priv->id_queue;
 	struct list_reusable_id *new_reusable;
@@ -42,15 +42,15 @@ void hyper_dmabuf_store_hid(hyper_dmabuf_id_t hid)
 	if (!new_reusable)
 		return;
 
-	new_reusable->hid = hid;
+	new_reusable->id = id;
 
 	list_add(&new_reusable->list, &reusable_head->list);
 }
 
-static hyper_dmabuf_id_t get_reusable_hid(void)
+static int get_reusable_id(void)
 {
 	struct list_reusable_id *reusable_head = hy_drv_priv->id_queue;
-	hyper_dmabuf_id_t hid = {-1, {0, 0, 0} };
+	int id = -1;
 
 	/* check there is reusable id */
 	if (!list_empty(&reusable_head->list)) {
@@ -59,11 +59,11 @@ static hyper_dmabuf_id_t get_reusable_hid(void)
 						 list);
 
 		list_del(&reusable_head->list);
-		hid = reusable_head->hid;
+		id = reusable_head->id;
 		kfree(reusable_head);
 	}
 
-	return hid;
+	return id;
 }
 
 void hyper_dmabuf_free_hid_list(void)
@@ -100,12 +100,12 @@ hyper_dmabuf_id_t hyper_dmabuf_get_hid(void)
 			return (hyper_dmabuf_id_t){-1, {0, 0, 0} };
 
 		/* list head has an invalid count */
-		reusable_head->hid.id = -1;
+		reusable_head->id = -1;
 		INIT_LIST_HEAD(&reusable_head->list);
 		hy_drv_priv->id_queue = reusable_head;
 	}
 
-	hid = get_reusable_hid();
+	hid.id = get_reusable_id();
 
 	/*creating a new H-ID only if nothing in the reusable id queue
 	 * and count is less than maximum allowed

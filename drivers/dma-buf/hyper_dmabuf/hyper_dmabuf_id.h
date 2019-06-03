@@ -32,12 +32,12 @@
 	(((hid.id) >> 24) & 0xFF)
 
 /* currently maximum number of buffers shared
- * at any given moment is limited to 1000
+ * at any given moment is limited to 0xFFFFFF
  */
-#define HYPER_DMABUF_ID_MAX 1000
+#define HYPER_DMABUF_ID_MAX 0xFFFFFF
 
 /* adding freed hid to the reusable list */
-void hyper_dmabuf_store_hid(hyper_dmabuf_id_t hid);
+void hyper_dmabuf_store_id(int id);
 
 /* freeing the reusasble list */
 void hyper_dmabuf_free_hid_list(void);
