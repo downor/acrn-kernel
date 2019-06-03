@@ -35,8 +35,11 @@
 #include "hyper_dmabuf_list.h"
 #include "hyper_dmabuf_id.h"
 
-DECLARE_HASHTABLE(hyper_dmabuf_hash_imported, MAX_ENTRY_IMPORTED);
-DECLARE_HASHTABLE(hyper_dmabuf_hash_exported, MAX_ENTRY_EXPORTED);
+DECLARE_HASHTABLE(hyper_dmabuf_hash_imported, 7);
+DECLARE_HASHTABLE(hyper_dmabuf_hash_exported, 7);
+
+int num_of_imported = 0;
+int num_of_exported = 0;
 
 #ifdef CONFIG_HYPER_DMABUF_SYSFS
 static ssize_t hyper_dmabuf_imported_show(struct device *drv,
@@ -156,6 +159,11 @@ int hyper_dmabuf_register_exported(struct exported_sgt_info *exported)
 	hash_add(hyper_dmabuf_hash_exported, &info_entry->node,
 		 info_entry->exported->hid.id);
 
+	num_of_exported++;
+	dev_dbg(hy_drv_priv->dev,
+		"%s, now # of exported in list %d\n", __func__,
+		num_of_imported);
+
 	return 0;
 }
 
@@ -172,6 +180,11 @@ int hyper_dmabuf_register_imported(struct imported_sgt_info *imported)
 
 	hash_add(hyper_dmabuf_hash_imported, &info_entry->node,
 		 info_entry->imported->hid.id);
+
+	num_of_imported++;
+	dev_dbg(hy_drv_priv->dev,
+		"%s, now # of imported in list %d\n", __func__,
+		num_of_imported);
 
 	return 0;
 }
@@ -248,6 +261,10 @@ int hyper_dmabuf_remove_exported(hyper_dmabuf_id_t hid)
 						    hid)) {
 				hash_del(&info_entry->node);
 				kfree(info_entry);
+				num_of_exported--;
+				dev_dbg(hy_drv_priv->dev,
+					"%s, now # of exported in list %d\n",
+					__func__, num_of_imported);
 				return 0;
 			}
 
@@ -270,6 +287,10 @@ int hyper_dmabuf_remove_imported(hyper_dmabuf_id_t hid)
 						    hid)) {
 				hash_del(&info_entry->node);
 				kfree(info_entry);
+				num_of_imported--;
+				dev_dbg(hy_drv_priv->dev,
+					"%s, now # of imported in list %d\n",
+					__func__, num_of_imported);
 				return 0;
 			}
 
@@ -304,6 +325,11 @@ void hyper_dmabuf_remove_imported_vmid(int vmid)
 		if (HYPER_DMABUF_DOM_ID(info_entry->imported->hid) == vmid) {
 			hash_del(&info_entry->node);
 			kfree(info_entry);
+			num_of_imported--;
 		}
 	}
+
+	dev_dbg(hy_drv_priv->dev,
+		"%s, now # of imported in list %d\n", __func__,
+		num_of_imported);
 }
