@@ -27,11 +27,6 @@
 
 #include "hyper_dmabuf_struct.h"
 
-/* number of bits to be used for exported dmabufs hash table */
-#define MAX_ENTRY_EXPORTED 7
-/* number of bits to be used for imported dmabufs hash table */
-#define MAX_ENTRY_IMPORTED 7
-
 struct list_entry_exported {
 	struct exported_sgt_info *exported;
 	struct hlist_node node;
