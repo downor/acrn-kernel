@@ -63,7 +63,7 @@ static void force_free(struct exported_sgt_info *exported,
 
 	if (exported->filp == filp) {
 		dev_dbg(hy_drv_priv->dev,
-			"Forcefully releasing buffer {id:%d key:%d %d %d}\n",
+			"Forcefully releasing buffer {id:%x key:%x %x %x}\n",
 			 exported->hid.id, exported->hid.rng_key[0],
 			 exported->hid.rng_key[1], exported->hid.rng_key[2]);
 

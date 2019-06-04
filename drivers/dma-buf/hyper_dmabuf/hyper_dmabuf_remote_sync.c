@@ -159,7 +159,7 @@ int hyper_dmabuf_remote_sync(hyper_dmabuf_id_t hid, int ops)
 
 	case HYPER_DMABUF_OPS_RELEASE:
 		dev_dbg(hy_drv_priv->dev,
-			"id:%d key:%d %d %d} released, ref left: %d\n",
+			"id:%x key:%x %x %x} released, ref left: %d\n",
 			 exported->hid.id, exported->hid.rng_key[0],
 			 exported->hid.rng_key[1], exported->hid.rng_key[2],
 			 exported->active - 1);
@@ -178,7 +178,7 @@ int hyper_dmabuf_remote_sync(hyper_dmabuf_id_t hid, int ops)
 		 * data and remove that buffer.
 		 */
 		dev_dbg(hy_drv_priv->dev,
-			"Buffer {id:%d key:%d %d %d} final released\n",
+			"Buffer {id:%x key:%x %x %x} final released\n",
 			exported->hid.id, exported->hid.rng_key[0],
 			exported->hid.rng_key[1], exported->hid.rng_key[2]);
 

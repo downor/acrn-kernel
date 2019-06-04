@@ -211,7 +211,7 @@ static void cmd_process_work(struct work_struct *work)
 		imported->ref_handle = (u64)req->op[8] << 32 | req->op[7];
 
 		dev_dbg(hy_drv_priv->dev, "DMABUF was exported\n");
-		dev_dbg(hy_drv_priv->dev, "\thid{id:%d key:%d %d %d}\n",
+		dev_dbg(hy_drv_priv->dev, "\thid{id:%x key:%x %x %x}\n",
 			req->op[0], req->op[1], req->op[2],
 			req->op[3]);
 		dev_dbg(hy_drv_priv->dev, "\tnents %d\n", req->op[4]);
@@ -336,28 +336,28 @@ int hyper_dmabuf_msg_parse(int domid, struct hyper_dmabuf_req *req)
 	if (req->cmd == HYPER_DMABUF_EXPORT_FD) {
 		/* find a corresponding SGT for the id */
 		dev_dbg(hy_drv_priv->dev,
-			"HYPER_DMABUF_EXPORT_FD for {id:%d key:%d %d %d}\n",
+			"HYPER_DMABUF_EXPORT_FD for {id:%x key:%x %x %x}\n",
 			hid.id, hid.rng_key[0], hid.rng_key[1], hid.rng_key[2]);
 
 		exported = hyper_dmabuf_find_exported(hid);
 
 		if (!exported) {
 			dev_err(hy_drv_priv->dev,
-				"buffer {id:%d key:%d %d %d} not found\n",
+				"buffer {id:%x key:%x %x %x} not found\n",
 				hid.id, hid.rng_key[0], hid.rng_key[1],
 				hid.rng_key[2]);
 
 			req->stat = HYPER_DMABUF_REQ_ERROR;
 		} else if (!exported->valid) {
 			dev_dbg(hy_drv_priv->dev,
-				"Buffer no longer valid {id:%d key:%d %d %d}\n",
+				"Buffer no longer valid {id:%x key:%x %x %x}\n",
 				hid.id, hid.rng_key[0], hid.rng_key[1],
 				hid.rng_key[2]);
 
 			req->stat = HYPER_DMABUF_REQ_ERROR;
 		} else {
 			dev_dbg(hy_drv_priv->dev,
-				"Buffer still valid {id:%d key:%d %d %d}\n",
+				"Buffer still valid {id:%x key:%x %x %x}\n",
 				hid.id, hid.rng_key[0], hid.rng_key[1],
 				hid.rng_key[2]);
 
@@ -369,14 +369,14 @@ int hyper_dmabuf_msg_parse(int domid, struct hyper_dmabuf_req *req)
 
 	if (req->cmd == HYPER_DMABUF_EXPORT_FD_FAILED) {
 		dev_dbg(hy_drv_priv->dev,
-			"HYPER_DMABUF_EXPORT_FD_FAILED for {id:%d key:%d %d %d}\n",
+			"HYPER_DMABUF_EXPORT_FD_FAILED for {id:%x key:%x %x %x}\n",
 			hid.id, hid.rng_key[0], hid.rng_key[1], hid.rng_key[2]);
 
 		exported = hyper_dmabuf_find_exported(hid);
 
 		if (!exported) {
 			dev_err(hy_drv_priv->dev,
-				"buffer {id:%d key:%d %d %d} not found\n",
+				"buffer {id:%x key:%x %x %x} not found\n",
 				hid.id, hid.rng_key[0], hid.rng_key[1],
 				hid.rng_key[2]);
 
