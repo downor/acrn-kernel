@@ -225,21 +225,21 @@ static void hyper_dmabuf_ops_release(struct dma_buf *dma_buf)
 	dev_dbg(hy_drv_priv->dev, "%s: clear imported->dma_buf\n", __func__);
 	imported->dma_buf = NULL;
 
-	if(imported->importers != 1) {
-		dev_err(hy_drv_priv->dev, "%s: Failed, importers:%d\n", __func__,
-				imported->importers);
+	imported->importers--;
+
+	if (imported->importers == 0) {
+		bknd_ops->unmap_shared_pages(&imported->refs_info,
+					     imported->nents);
+
+		if (imported->sgt) {
+			sg_free_table(imported->sgt);
+			kfree(imported->sgt);
+			imported->sgt = NULL;
+		}
 	}
 
-	bknd_ops->unmap_shared_pages(&imported->refs_info,
-				     imported->nents);
-
-	if (imported->sgt) {
-		sg_free_table(imported->sgt);
-		kfree(imported->sgt);
-		imported->sgt = NULL;
-	}
-
-	finish = imported && !imported->importers;
+	finish = imported && !imported->valid &&
+		 !imported->importers;
 
 
 	dev_dbg(hy_drv_priv->dev, "%s   finished:%d ref_c:%d valid:%c\n", __func__,
