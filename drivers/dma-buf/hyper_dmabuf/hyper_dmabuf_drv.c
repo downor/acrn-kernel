@@ -196,6 +196,7 @@ put_back_event:
 				}
 
 				ret = -EFAULT;
+				dev_dbg(hy_drv_priv->dev, "putting back event\n");
 
 				goto put_back_event;
 			}

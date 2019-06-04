@@ -83,7 +83,7 @@ void hyper_dmabuf_events_release(void)
 
 	if (hy_drv_priv->pending) {
 		dev_err(hy_drv_priv->dev,
-			"possible leak on event_list\n");
+			"possible leak(%d) on event_list\n", hy_drv_priv->pending );
 	}
 
 	spin_unlock_irqrestore(&hy_drv_priv->event_lock, irqflags);
