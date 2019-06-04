@@ -114,7 +114,7 @@ int hyper_dmabuf_import_event(hyper_dmabuf_id_t hid)
 		"event number = %d :", hy_drv_priv->pending);
 
 	dev_dbg(hy_drv_priv->dev,
-		"generating events for {%d, %d, %d, %d}\n",
+		"generating events for {id:%x key:%x %x %x}\n",
 		imported->hid.id, imported->hid.rng_key[0],
 		imported->hid.rng_key[1], imported->hid.rng_key[2]);
 
