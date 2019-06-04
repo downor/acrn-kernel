@@ -47,6 +47,7 @@ static ssize_t hyper_dmabuf_imported_show(struct device *drv,
 	int bkt;
 	ssize_t count = 0;
 	size_t total = 0;
+	size_t hbuf_count = 0;
 
 	hash_for_each(hyper_dmabuf_hash_imported, bkt, info_entry, node) {
 		hyper_dmabuf_id_t hid = info_entry->imported->hid;
@@ -54,15 +55,15 @@ static ssize_t hyper_dmabuf_imported_show(struct device *drv,
 		bool valid = info_entry->imported->valid;
 		int num_importers = info_entry->imported->importers;
 
+		hbuf_count++;
 		total += nents;
 		count += scnprintf(buf + count, PAGE_SIZE - count,
-				"hid:{%d %d %d %d}, nent:%d, v:%c, numi:%d\n",
-				hid.id, hid.rng_key[0], hid.rng_key[1],
-				hid.rng_key[2], nents, (valid ? 't' : 'f'),
+				"id:{%x,} n:%d v:%c r:%d\n",
+				hid.id, nents, (valid ? 't' : 'f'),
 				num_importers);
 	}
 	count += scnprintf(buf + count, PAGE_SIZE - count,
-			   "total nents: %lu\n", total);
+			   "nents:%lu hbufs:%lu\n", total, hbuf_count);
 
 	return count;
 }
@@ -75,6 +76,7 @@ static ssize_t hyper_dmabuf_exported_show(struct device *drv,
 	int bkt;
 	ssize_t count = 0;
 	size_t total = 0;
+	size_t hbuf_count = 0;
 
 	hash_for_each(hyper_dmabuf_hash_exported, bkt, info_entry, node) {
 		hyper_dmabuf_id_t hid = info_entry->exported->hid;
@@ -82,15 +84,15 @@ static ssize_t hyper_dmabuf_exported_show(struct device *drv,
 		bool valid = info_entry->exported->valid;
 		int importer_exported = info_entry->exported->active;
 
+		hbuf_count++;
 		total += nents;
 		count += scnprintf(buf + count, PAGE_SIZE - count,
-				   "hid:{%d %d %d %d}, nent:%d, v:%c, ie:%d\n",
-				   hid.id, hid.rng_key[0], hid.rng_key[1],
-				   hid.rng_key[2], nents, (valid ? 't' : 'f'),
+				   "id:{%x,} n:%d v:%c r:%d\n",
+				   hid.id, nents, (valid ? 't' : 'f'),
 				   importer_exported);
 	}
 	count += scnprintf(buf + count, PAGE_SIZE - count,
-			   "total nents: %lu\n", total);
+			   "nents:%lu hbufs:%lu\n", total, hbuf_count);
 
 	return count;
 }
