@@ -165,13 +165,13 @@ int hyper_dmabuf_remote_sync(hyper_dmabuf_id_t hid, int ops)
 			 exported->active - 1);
 		mutex_lock(&hy_drv_priv->lock);
 
-		exported->active--;
+		//exported->active--;
 
 		/* If there are still importers just break, if no then
 		 * continue with final cleanup
 		 */
-		if (exported->active)
-			break;
+		//if (exported->active)
+			//break;
 
 		/* Importer just released buffer fd, check if there is
 		 * any other importer still using it.
@@ -183,14 +183,14 @@ int hyper_dmabuf_remote_sync(hyper_dmabuf_id_t hid, int ops)
 			exported->hid.id, exported->hid.rng_key[0],
 			exported->hid.rng_key[1], exported->hid.rng_key[2]);
 
-		if (!exported->valid && !exported->active &&
-		    !exported->unexport_sched) {
+		//if (!exported->valid && !exported->active &&
+		//    !exported->unexport_sched) {
 			hyper_dmabuf_cleanup_sgt_info(exported, false);
 			hyper_dmabuf_remove_exported(hid);
 			kfree(exported);
 			/* store hyper_dmabuf_id in the list for reuse */
 			hyper_dmabuf_store_hid(hid);
-		}
+		//}
 		mutex_unlock(&hy_drv_priv->lock);
 
 		break;
