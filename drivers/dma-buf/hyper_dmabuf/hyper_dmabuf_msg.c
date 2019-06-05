@@ -217,16 +217,6 @@ static void cmd_process_work(struct work_struct *work)
 		imported->last_len = req->op[6];
 		imported->ref_handle = (u64)req->op[8] << 32 | req->op[7];
 
-		dev_dbg(hy_drv_priv->dev, "DMABUF was exported\n");
-		dev_dbg(hy_drv_priv->dev, "\thid{id:%x key:%x %x %x}\n",
-			req->op[0], req->op[1], req->op[2],
-			req->op[3]);
-		dev_dbg(hy_drv_priv->dev, "\tnents %d\n", req->op[4]);
-		dev_dbg(hy_drv_priv->dev, "\tfirst offset %d\n", req->op[5]);
-		dev_dbg(hy_drv_priv->dev, "\tlast len %d\n", req->op[6]);
-		dev_dbg(hy_drv_priv->dev, "\tgrefid 0x%llx\n",
-			(u64)req->op[8] << 32 | req->op[7]);
-
 		memcpy(imported->priv, &req->op[10], req->op[9]);
 
 		imported->valid = true;
@@ -238,6 +228,17 @@ static void cmd_process_work(struct work_struct *work)
 #endif
 
 		mutex_unlock(&hy_drv_priv->lock);
+
+		dev_dbg(hy_drv_priv->dev, "DMABUF was exported\n");
+		dev_dbg(hy_drv_priv->dev, "\thid{id:%x key:%x %x %x}\n",
+			req->op[0], req->op[1], req->op[2],
+			req->op[3]);
+		dev_dbg(hy_drv_priv->dev, "\tnents %d\n", req->op[4]);
+		dev_dbg(hy_drv_priv->dev, "\tfirst offset %d\n", req->op[5]);
+		dev_dbg(hy_drv_priv->dev, "\tlast len %d\n", req->op[6]);
+		dev_dbg(hy_drv_priv->dev, "\tgrefid 0x%llx\n",
+			(u64)req->op[8] << 32 | req->op[7]);
+
 		break;
 
 	case HYPER_DMABUF_OPS_TO_SOURCE:
