@@ -58,7 +58,7 @@ static ssize_t hyper_dmabuf_imported_show(struct device *drv,
 		hbuf_count++;
 		total += nents;
 		count += scnprintf(buf + count, PAGE_SIZE - count,
-				"id:{%d, %x} n:%d v:%c r:%d\n",
+				"id:{%x, %x} n:%d v:%c r:%d\n",
 				hid.id, hid.rng_key[0], nents, (valid ? 't' : 'f'),
 				num_importers);
 	}

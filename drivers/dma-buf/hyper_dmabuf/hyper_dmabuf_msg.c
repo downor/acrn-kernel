@@ -217,10 +217,9 @@ static void cmd_process_work(struct work_struct *work)
 		imported->last_len = req->op[6];
 		imported->ref_handle = (u64)req->op[8] << 32 | req->op[7];
 
-		dev_dbg(hy_drv_priv->dev, "DMABUF was exported\n");
-		dev_dbg(hy_drv_priv->dev, "\thid{id:%x key:%x %x %x}\n",
-			req->op[0], req->op[1], req->op[2],
-			req->op[3]);
+		dev_info(hy_drv_priv->dev, "DMABUF was exported\n");
+		dev_info(hy_drv_priv->dev, "\thid{id:%x key:%x}\n",
+			req->op[0], req->op[1]);
 		dev_dbg(hy_drv_priv->dev, "\tnents %d\n", req->op[4]);
 		dev_dbg(hy_drv_priv->dev, "\tfirst offset %d\n", req->op[5]);
 		dev_dbg(hy_drv_priv->dev, "\tlast len %d\n", req->op[6]);
@@ -324,7 +323,7 @@ int hyper_dmabuf_msg_parse(int domid, struct hyper_dmabuf_req *req)
 				 * anymore.
 				 */
 				imported->valid = false;
-				hyper_dmabuf_remove_imported(hid);
+				//hyper_dmabuf_remove_imported(hid);
 			} else {
 				/* No one is using buffer, remove it from
 				 * imported list

@@ -443,9 +443,8 @@ static int hyper_dmabuf_export_fd_ioctl(struct file *filp, void *data)
 	int ret = 0;
 
 	dev_dbg(hy_drv_priv->dev, "%s entry\n", __func__);
-	dev_dbg(hy_drv_priv->dev, "%s try export {id:%x key:%x %x %x}\n", __func__,
-				export_fd_attr->hid.id, export_fd_attr->hid.rng_key[0],
-				export_fd_attr->hid.rng_key[1], export_fd_attr->hid.rng_key[2]);
+	dev_info(hy_drv_priv->dev, "%s try export {id:%x key:%x}\n", __func__,
+				export_fd_attr->hid.id, export_fd_attr->hid.rng_key[0]);
 
 	mutex_lock(&hy_drv_priv->lock);
 

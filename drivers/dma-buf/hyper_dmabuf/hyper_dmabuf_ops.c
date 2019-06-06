@@ -204,8 +204,12 @@ static void hyper_dmabuf_ops_release(struct dma_buf *dma_buf)
 	struct hyper_dmabuf_bknd_ops *bknd_ops = hy_drv_priv->bknd_ops;
 	int finish;
 
-	if (!dma_buf->priv)
+	dev_info(hy_drv_priv->dev, "ops_release\n");	
+
+	if (!dma_buf->priv) {
+		dev_err(hy_drv_priv->dev, "ops_release failed\n");	
 		return;
+	}
 
 	mutex_lock(&hy_drv_priv->lock);
 
