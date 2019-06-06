@@ -58,8 +58,8 @@ static ssize_t hyper_dmabuf_imported_show(struct device *drv,
 		hbuf_count++;
 		total += nents;
 		count += scnprintf(buf + count, PAGE_SIZE - count,
-				"id:{%x,} n:%d v:%c r:%d\n",
-				hid.id, nents, (valid ? 't' : 'f'),
+				"id:{%d, %x} n:%d v:%c r:%d\n",
+				hid.id, hid.rng_key[0], nents, (valid ? 't' : 'f'),
 				num_importers);
 	}
 	count += scnprintf(buf + count, PAGE_SIZE - count,
@@ -87,8 +87,8 @@ static ssize_t hyper_dmabuf_exported_show(struct device *drv,
 		hbuf_count++;
 		total += nents;
 		count += scnprintf(buf + count, PAGE_SIZE - count,
-				   "id:{%x,} n:%d v:%c r:%d\n",
-				   hid.id, nents, (valid ? 't' : 'f'),
+				   "id:{%x, %x} n:%d v:%c r:%d\n",
+				   hid.id, hid.rng_key[0], nents, (valid ? 't' : 'f'),
 				   importer_exported);
 	}
 	count += scnprintf(buf + count, PAGE_SIZE - count,

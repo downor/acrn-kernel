@@ -270,7 +270,7 @@ static int __init hyper_dmabuf_drv_init(void)
 {
 	int ret = 0;
 
-	printk(KERN_NOTICE "hyper_dmabuf_starting: Initialization started\n");
+	printk(KERN_NOTICE "hyper_dmabuf_starting: DWDW Initialization started\n");
 
 	hy_drv_priv = kcalloc(1, sizeof(struct hyper_dmabuf_private),
 			      GFP_KERNEL);
