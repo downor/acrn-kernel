@@ -215,10 +215,8 @@ static void hyper_dmabuf_ops_release(struct dma_buf *dma_buf)
 
 	imported = (struct imported_sgt_info *)dma_buf->priv;
 
-	dev_dbg(hy_drv_priv->dev, "%s: {%x,%x,%x,%x} dmabuf:%p importers:%d\n", __func__,
-			imported->hid.id, imported->hid.rng_key[0],
-			imported->hid.rng_key[1], imported->hid.rng_key[2],
-			imported->dma_buf, imported->importers);
+	dev_info(hy_drv_priv->dev, "%s: {%x %x}\n", __func__,
+			imported->hid.id, imported->hid.rng_key[0]);
 
 	if (dma_buf != imported->dma_buf) {
 		dev_dbg(hy_drv_priv->dev, "%s: dma_buf changed!\n", __func__);
@@ -242,7 +240,7 @@ static void hyper_dmabuf_ops_release(struct dma_buf *dma_buf)
 		}
 	}
 
-	finish = imported && !imported->valid &&
+	finish = imported &&
 		 !imported->importers;
 
 

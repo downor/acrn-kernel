@@ -158,7 +158,7 @@ int hyper_dmabuf_remote_sync(hyper_dmabuf_id_t hid, int ops)
 		break;
 
 	case HYPER_DMABUF_OPS_RELEASE:
-		dev_dbg(hy_drv_priv->dev,
+		dev_info(hy_drv_priv->dev,
 			"{id:%x key:%x %x %x} released, ref left: %d\n",
 			 exported->hid.id, exported->hid.rng_key[0],
 			 exported->hid.rng_key[1], exported->hid.rng_key[2],
@@ -178,13 +178,13 @@ int hyper_dmabuf_remote_sync(hyper_dmabuf_id_t hid, int ops)
 		 * If not and buffer was unexported, clean up shared
 		 * data and remove that buffer.
 		 */
-		dev_dbg(hy_drv_priv->dev,
-			"Buffer {id:%x key:%x %x %x} final released\n",
-			exported->hid.id, exported->hid.rng_key[0],
-			exported->hid.rng_key[1], exported->hid.rng_key[2]);
 
 		if (!exported->valid && !exported->active &&
 		    !exported->unexport_sched) {
+			dev_info(hy_drv_priv->dev,
+				"removing from list {id:%x key:%x} final released\n",
+				exported->hid.id, exported->hid.rng_key[0]);
+
 			hyper_dmabuf_cleanup_sgt_info(exported, false);
 			hyper_dmabuf_remove_exported(hid);
 			kfree(exported);

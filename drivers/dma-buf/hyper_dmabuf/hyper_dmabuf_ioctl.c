@@ -453,12 +453,10 @@ static int hyper_dmabuf_export_fd_ioctl(struct file *filp, void *data)
 
 	/* can't find sgt from the table */
 	if (!imported) {
-
 		mutex_unlock(&hy_drv_priv->lock);
 		dev_err(hy_drv_priv->dev, "can't find the entry\n");
 		return -ENOENT;
 	}
-
 
 	if (imported->dma_buf && dmabuf_refcount(imported->dma_buf)) {
 		if (IS_ERR(imported->dma_buf)) {
@@ -483,9 +481,8 @@ static int hyper_dmabuf_export_fd_ioctl(struct file *filp, void *data)
 						export_fd_attr->flags);
 		mutex_unlock(&hy_drv_priv->lock);
 
-		dev_dbg(hy_drv_priv->dev, "%s exit {id:%x key:%x %x %x}\n", __func__,
-				export_fd_attr->hid.id, export_fd_attr->hid.rng_key[0],
-				export_fd_attr->hid.rng_key[1], export_fd_attr->hid.rng_key[2]);
+		dev_info(hy_drv_priv->dev, "%s exit1 {id:%x key:%x}\n", __func__,
+			 export_fd_attr->hid.id, export_fd_attr->hid.rng_key[0]);
 		return 0;
 	}
 
@@ -605,9 +602,9 @@ static int hyper_dmabuf_export_fd_ioctl(struct file *filp, void *data)
 
 	mutex_unlock(&hy_drv_priv->lock);
 
-	dev_dbg(hy_drv_priv->dev, "%s exit {id:%x key:%x %x %x}\n", __func__,
+	dev_info(hy_drv_priv->dev, "%s exit2 {id:%x key:%x}, r=%d\n", __func__,
 				export_fd_attr->hid.id, export_fd_attr->hid.rng_key[0],
-				export_fd_attr->hid.rng_key[1], export_fd_attr->hid.rng_key[2]);
+				imported->importers);
 	return ret;
 }
 

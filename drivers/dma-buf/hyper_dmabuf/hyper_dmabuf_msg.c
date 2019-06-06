@@ -310,8 +310,8 @@ int hyper_dmabuf_msg_parse(int domid, struct hyper_dmabuf_req *req)
 		/* command : HYPER_DMABUF_NOTIFY_UNEXPORT,
 		 * op0~3 : hyper_dmabuf_id
 		 */
-		dev_dbg(hy_drv_priv->dev,
-			"processing HYPER_DMABUF_NOTIFY_UNEXPORT\n");
+		dev_info(hy_drv_priv->dev,
+			"HYPER_DMABUF_NOTIFY_UNEXPORT for %x %x\n", hid.id, hid.rng_key[0]);
 
 		imported = hyper_dmabuf_find_imported(hid);
 
