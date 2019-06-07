@@ -158,7 +158,7 @@ static void cmd_process_work(struct work_struct *work)
 
 			if (!imported) {
 				dev_err(hy_drv_priv->dev,
-					"Can't find imported sgt_info\n");
+					"Can't find imported sgt_info: %x, %x\n", exist.id, exist.rng_key[0]);
 				mutex_unlock(&hy_drv_priv->lock);
 				break;
 			}
