@@ -87,6 +87,41 @@ static int sync_request(hyper_dmabuf_id_t hid, int dmabuf_ops)
 	return ret;
 }
 
+static int sync_request_and_wait(hyper_dmabuf_id_t hid, int dmabuf_ops)
+{
+	struct hyper_dmabuf_req *req;
+	struct hyper_dmabuf_bknd_ops *bknd_ops = hy_drv_priv->bknd_ops;
+	int op[5];
+	int i;
+	int ret;
+
+	op[0] = hid.id;
+
+	for (i = 0; i < 3; i++)
+		op[i+1] = hid.rng_key[i];
+
+	op[4] = dmabuf_ops;
+
+	req = kcalloc(1, sizeof(*req), GFP_KERNEL);
+
+	if (!req)
+		return -ENOMEM;
+
+	hyper_dmabuf_create_req(req, HYPER_DMABUF_OPS_TO_SOURCE, &op[0]);
+
+	/* send request and wait for a response */
+	ret = bknd_ops->send_req(HYPER_DMABUF_DOM_ID(hid), req, 1);
+
+	if (ret < 0) {
+		dev_dbg(hy_drv_priv->dev,
+			"dmabuf sync request failed:%d\n", req->op[4]);
+	}
+
+	kfree(req);
+
+	return ret;
+}
+
 static int hyper_dmabuf_ops_attach(struct dma_buf *dmabuf,
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 17, 0)
 				   struct device *dev,
@@ -253,7 +288,7 @@ static void hyper_dmabuf_ops_release(struct dma_buf *dma_buf)
 			finish, imported->importers, imported->valid? 'Y':'N');
 
 
-	sync_request(imported->hid, HYPER_DMABUF_OPS_RELEASE);
+	sync_request_and_wait(imported->hid, HYPER_DMABUF_OPS_RELEASE);
 
 	/*
 	 * Check if buffer is still valid and if not remove it
