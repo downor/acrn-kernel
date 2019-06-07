@@ -334,8 +334,6 @@ int hyper_dmabuf_msg_parse(int domid, struct hyper_dmabuf_req *req)
 				kfree(imported->priv);
 				kfree(imported);
 			}
-		} else {
-			req->stat = HYPER_DMABUF_REQ_ERROR;
 		}
 
 		mutex_unlock(&hy_drv_priv->lock);
