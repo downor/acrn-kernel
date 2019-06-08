@@ -166,7 +166,12 @@ int hyper_dmabuf_remote_sync(hyper_dmabuf_id_t hid, int ops)
 		mutex_lock(&hy_drv_priv->lock);
 
 		exported->active--;
-
+		
+		dev_dbg(hy_drv_priv->dev,
+				"processing HYPER_DMABUF_OPS_RELEASE: {id:%x key:%x %x %x} active:%d\n",
+				exported->hid.id, exported->hid.rng_key[0],
+				exported->hid.rng_key[1], exported->hid.rng_key[2], exported->active);
+	
 		/* If there are still importers just break, if no then
 		 * continue with final cleanup
 		 */
@@ -178,13 +183,14 @@ int hyper_dmabuf_remote_sync(hyper_dmabuf_id_t hid, int ops)
 		 * If not and buffer was unexported, clean up shared
 		 * data and remove that buffer.
 		 */
-		dev_dbg(hy_drv_priv->dev,
-			"Buffer {id:%x key:%x %x %x} final released\n",
-			exported->hid.id, exported->hid.rng_key[0],
-			exported->hid.rng_key[1], exported->hid.rng_key[2]);
+
 
 		if (!exported->valid && !exported->active &&
 		    !exported->unexport_sched) {
+			dev_dbg(hy_drv_priv->dev,
+				"Buffer {id:%x key:%x %x %x} final released\n",
+				exported->hid.id, exported->hid.rng_key[0],
+				exported->hid.rng_key[1], exported->hid.rng_key[2]);
 			hyper_dmabuf_cleanup_sgt_info(exported, false);
 			hyper_dmabuf_remove_exported(hid);
 			kfree(exported);

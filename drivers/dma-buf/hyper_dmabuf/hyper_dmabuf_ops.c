@@ -202,18 +202,21 @@ static void hyper_dmabuf_ops_release(struct dma_buf *dma_buf)
 {
 	struct imported_sgt_info *imported;
 	struct hyper_dmabuf_bknd_ops *bknd_ops = hy_drv_priv->bknd_ops;
+	int finish;
 
-	if (!dma_buf->priv)
+	dev_info(hy_drv_priv->dev, "ops_release\n");	
+
+	if (!dma_buf->priv) {
+		dev_err(hy_drv_priv->dev, "ops_release failed\n");	
 		return;
+	}
 
 	mutex_lock(&hy_drv_priv->lock);
 
 	imported = (struct imported_sgt_info *)dma_buf->priv;
 
-	dev_dbg(hy_drv_priv->dev, "%s: {%x,%x,%x,%x} dmabuf:%p importers:%d\n", __func__,
-			imported->hid.id, imported->hid.rng_key[0],
-			imported->hid.rng_key[1], imported->hid.rng_key[2],
-			imported->dma_buf, imported->importers);
+	dev_info(hy_drv_priv->dev, "%s: {%x %x}\n", __func__,
+			imported->hid.id, imported->hid.rng_key[0]);
 
 	if (dma_buf != imported->dma_buf) {
 		dev_dbg(hy_drv_priv->dev, "%s: dma_buf changed!\n", __func__);
@@ -221,24 +224,42 @@ static void hyper_dmabuf_ops_release(struct dma_buf *dma_buf)
 		return;
 	}
 
+	dev_dbg(hy_drv_priv->dev, "%s: clear imported->dma_buf\n", __func__);
 	imported->dma_buf = NULL;
-
 	WARN_ON(imported->importers != 1);
+	imported->importers--;
 
-	bknd_ops->unmap_shared_pages(&imported->refs_info,
-			imported->nents);
+	if (imported->importers == 0) {
+		bknd_ops->unmap_shared_pages(&imported->refs_info,
+					     imported->nents);
 
-	if (imported->sgt) {
-		sg_free_table(imported->sgt);
-		kfree(imported->sgt);
-		imported->sgt = NULL;
+		if (imported->sgt) {
+			sg_free_table(imported->sgt);
+			kfree(imported->sgt);
+			imported->sgt = NULL;
+		}
 	}
+
+	finish = imported &&
+		 !imported->importers;
+
+
+	dev_dbg(hy_drv_priv->dev, "%s   finished:%d ref_c:%d valid:%c\n", __func__,
+			finish, imported->importers, imported->valid? 'Y':'N');
+
 
 	sync_request(imported->hid, HYPER_DMABUF_OPS_RELEASE);
 
-	hyper_dmabuf_remove_imported(imported->hid);
+	/*
+	 * Check if buffer is still valid and if not remove it
+	 * from imported list. That has to be done after sending
+	 * sync request
+	 */
+	if (finish) {
+		hyper_dmabuf_remove_imported(imported->hid);
 		kfree(imported->priv);
 		kfree(imported);
+	}
 
 	mutex_unlock(&hy_drv_priv->lock);
 }
