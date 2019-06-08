@@ -314,20 +314,6 @@ void hyper_dmabuf_foreach_exported(
 	}
 }
 
-void hyper_dmabuf_foreach_imported(
-	void (*func)(struct imported_sgt_info *, void *attr),
-	void *attr)
-{
-	struct list_entry_imported *info_entry;
-	struct hlist_node *tmp;
-	int bkt;
-
-	hash_for_each_safe(hyper_dmabuf_hash_imported, bkt, tmp,
-			info_entry, node) {
-		func(info_entry->imported, attr);
-	}
-}
-
 void hyper_dmabuf_remove_imported_vmid(int vmid)
 {
 	struct list_entry_imported *info_entry;

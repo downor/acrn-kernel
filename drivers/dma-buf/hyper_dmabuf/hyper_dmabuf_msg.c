@@ -29,7 +29,6 @@
 #include <linux/kernel.h>
 #include <linux/errno.h>
 #include <linux/slab.h>
-#include <linux/dma-buf.h>
 #include <linux/workqueue.h>
 #include "hyper_dmabuf_drv.h"
 #include "hyper_dmabuf_msg.h"
@@ -119,26 +118,6 @@ void hyper_dmabuf_create_req(struct hyper_dmabuf_req *req,
 	}
 }
 
-static void clr_all_id_matched(struct imported_sgt_info *imported,
-			       void *attr)
-{
-	struct hyper_dmabuf_bknd_ops *bknd_ops = hy_drv_priv->bknd_ops;
-	int id = *(int *)attr;
-
-	if ((imported->hid.id == id) && (imported->importers == 0)) {
-		if (imported->sgt) {
-			bknd_ops->unmap_shared_pages(&imported->refs_info,
-						     imported->nents);
-			sg_free_table(imported->sgt);
-			kfree(imported->sgt);
-		}
-
-		hyper_dmabuf_remove_imported(imported->hid);
-		kfree(imported->priv);
-		kfree(imported);
-	}
-}
-
 static void cmd_process_work(struct work_struct *work)
 {
 	struct imported_sgt_info *imported;
@@ -212,23 +191,19 @@ static void cmd_process_work(struct work_struct *work)
 			break;
 		}
 
-		/* remove all previous 'imported's with same id */
-		hyper_dmabuf_foreach_imported(clr_all_id_matched,
-					      (void *)&req->op[0]);
-
-		mutex_unlock(&hy_drv_priv->lock);
-
-		/* new imported generation */
 		imported = kcalloc(1, sizeof(*imported), GFP_KERNEL);
 
-		if (!imported)
+		if (!imported) {
+			mutex_unlock(&hy_drv_priv->lock);
 			break;
+		}
 
 		imported->sz_priv = req->op[9];
 		imported->priv = kcalloc(1, req->op[9], GFP_KERNEL);
 
 		if (!imported->priv) {
 			kfree(imported);
+			mutex_unlock(&hy_drv_priv->lock);
 			break;
 		}
 
@@ -251,6 +226,9 @@ static void cmd_process_work(struct work_struct *work)
 		/* generating import event */
 		hyper_dmabuf_import_event(imported->hid);
 #endif
+
+		mutex_unlock(&hy_drv_priv->lock);
+
 		dev_dbg(hy_drv_priv->dev, "DMABUF was exported\n");
 		dev_dbg(hy_drv_priv->dev, "\thid{id:%x key:%x %x %x}\n",
 			req->op[0], req->op[1], req->op[2],

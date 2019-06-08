@@ -61,9 +61,6 @@ void hyper_dmabuf_remove_imported_vmid(int vmid);
 void hyper_dmabuf_foreach_exported(void (*func)(struct exported_sgt_info *,
 				   void *attr), void *attr);
 
-void hyper_dmabuf_foreach_imported(void (*func)(struct imported_sgt_info *,
-				   void *attr), void *attr);
-
 int hyper_dmabuf_register_sysfs(struct device *dev);
 int hyper_dmabuf_unregister_sysfs(struct device *dev);
 
