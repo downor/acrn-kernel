@@ -68,7 +68,7 @@ struct hyper_dmabuf_private {
 };
 
 struct list_reusable_id {
-	int id;
+	hyper_dmabuf_id_t hid;
 	struct list_head list;
 };
 
