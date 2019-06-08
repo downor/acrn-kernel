@@ -286,7 +286,7 @@ int hyper_dmabuf_msg_parse(int domid, struct hyper_dmabuf_req *req)
 	hyper_dmabuf_id_t hid;
 
 	if (!req) {
-		dev_err(hy_drv_priv->dev, "request is NULL\n");
+		dev_err(hy_drv_priv->dev, "%s: request is NULL\n", __func__);
 		return -EINVAL;
 	}
 
@@ -294,6 +294,10 @@ int hyper_dmabuf_msg_parse(int domid, struct hyper_dmabuf_req *req)
 	hid.rng_key[0] = req->op[1];
 	hid.rng_key[1] = req->op[2];
 	hid.rng_key[2] = req->op[3];
+
+	dev_dbg(hy_drv_priv->dev, "%s: cmd:%x hid:{%x %x %x %x} \n",
+			__func__, req->cmd, hid.id, hid.rng_key[0],
+			hid.rng_key[0],hid.rng_key[0]);
 
 	if ((req->cmd < HYPER_DMABUF_EXPORT) ||
 		(req->cmd > HYPER_DMABUF_OPS_TO_SOURCE)) {
@@ -311,9 +315,6 @@ int hyper_dmabuf_msg_parse(int domid, struct hyper_dmabuf_req *req)
 		/* command : HYPER_DMABUF_NOTIFY_UNEXPORT,
 		 * op0~3 : hyper_dmabuf_id
 		 */
-		dev_info(hy_drv_priv->dev,
-			"HYPER_DMABUF_NOTIFY_UNEXPORT for %x %x\n", hid.id, hid.rng_key[0]);
-
 		imported = hyper_dmabuf_find_imported(hid);
 
 		if (imported) {
@@ -329,6 +330,14 @@ int hyper_dmabuf_msg_parse(int domid, struct hyper_dmabuf_req *req)
 				/* No one is using buffer, remove it from
 				 * imported list
 				 */
+				/* ToDO: lack of lock?  Here we are deleting
+				 * hid from the imported list without
+				 * protection. At the same time, there might be
+				 * users are requesting to export fd with this
+				 * hid. And kfree() doesn't gurantee the
+				 * pointer will NULL, in fact, no NULL
+				 * normally.
+				 * */
 				hyper_dmabuf_remove_imported(hid);
 				kfree(imported->priv);
 				kfree(imported);
@@ -397,7 +406,7 @@ int hyper_dmabuf_msg_parse(int domid, struct hyper_dmabuf_req *req)
 	}
 
 	dev_dbg(hy_drv_priv->dev,
-		"%s: putting request to workqueue\n", __func__);
+		"%s: putting request(%x) to workqueue\n", __func__, req->cmd);
 	temp_req = kmalloc(sizeof(*temp_req), GFP_ATOMIC);
 
 	if (!temp_req)
