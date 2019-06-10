@@ -282,7 +282,7 @@ static void hyper_dmabuf_ops_release(struct dma_buf *dma_buf)
 		}
 	}
 
-	finish = (imported != NULL) &&
+	finish = (imported != NULL) && !imported->valid &&
 		 !imported->importers;
 
 
