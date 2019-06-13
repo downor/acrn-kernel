@@ -218,9 +218,8 @@ static void cmd_process_work(struct work_struct *work)
 		imported->ref_handle = (u64)req->op[8] << 32 | req->op[7];
 
 		dev_dbg(hy_drv_priv->dev, "DMABUF was exported\n");
-		dev_dbg(hy_drv_priv->dev, "\thid{id:%x key:%x %x %x}\n",
-			req->op[0], req->op[1], req->op[2],
-			req->op[3]);
+		dev_dbg(hy_drv_priv->dev, "\thid{id:%x key:%x}\n",
+			req->op[0], req->op[1]);
 		dev_dbg(hy_drv_priv->dev, "\tnents %d\n", req->op[4]);
 		dev_dbg(hy_drv_priv->dev, "\tfirst offset %d\n", req->op[5]);
 		dev_dbg(hy_drv_priv->dev, "\tlast len %d\n", req->op[6]);
@@ -312,7 +311,7 @@ int hyper_dmabuf_msg_parse(int domid, struct hyper_dmabuf_req *req)
 		 * op0~3 : hyper_dmabuf_id
 		 */
 		dev_dbg(hy_drv_priv->dev,
-			"processing HYPER_DMABUF_NOTIFY_UNEXPORT\n");
+			"processing HYPER_DMABUF_NOTIFY_UNEXPORT for %x %x\n", hid.id, hid.rng_key[0]);
 
 		mutex_lock(&hy_drv_priv->lock);
 		imported = hyper_dmabuf_find_imported(hid);

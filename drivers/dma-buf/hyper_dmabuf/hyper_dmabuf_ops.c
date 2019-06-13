@@ -241,8 +241,12 @@ static void hyper_dmabuf_ops_release(struct dma_buf *dma_buf)
 	hyper_dmabuf_id_t hid;
 	int finish;
 
-	if (!dma_buf->priv)
+	dev_dbg(hy_drv_priv->dev, "ops_release\n");
+
+	if (!dma_buf->priv) {
+		dev_err(hy_drv_priv->dev, "ops_release failed\n");
 		return;
+	}
 
 	mutex_lock(&hy_drv_priv->lock);
 
@@ -253,10 +257,9 @@ static void hyper_dmabuf_ops_release(struct dma_buf *dma_buf)
 		mutex_unlock(&hy_drv_priv->lock);
 		return;
 	}
-	dev_dbg(hy_drv_priv->dev, "%s: {%x,%x,%x,%x} dmabuf:%p ref_c:%d\n", __func__,
-			imported->hid.id, imported->hid.rng_key[0],
-			imported->hid.rng_key[1], imported->hid.rng_key[2],
-			imported->dma_buf, imported->importers);
+
+	dev_dbg(hy_drv_priv->dev, "%s: {%x %x}\n", __func__,
+			imported->hid.id, imported->hid.rng_key[0]);
 
 	if (dma_buf != imported->dma_buf) {
 		dev_dbg(hy_drv_priv->dev, "%s: dma_buf changed!\n", __func__);

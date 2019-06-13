@@ -443,6 +443,8 @@ static int hyper_dmabuf_export_fd_ioctl(struct file *filp, void *data)
 	int ret = 0;
 
 	dev_dbg(hy_drv_priv->dev, "%s entry\n", __func__);
+	dev_dbg(hy_drv_priv->dev, "%s try export {id:%x key:%x}\n", __func__,
+				export_fd_attr->hid.id, export_fd_attr->hid.rng_key[0]);
 
 	mutex_lock(&hy_drv_priv->lock);
 
@@ -478,7 +480,9 @@ static int hyper_dmabuf_export_fd_ioctl(struct file *filp, void *data)
 		export_fd_attr->fd = dma_buf_fd(imported->dma_buf,
 						export_fd_attr->flags);
 		mutex_unlock(&hy_drv_priv->lock);
-		dev_dbg(hy_drv_priv->dev, "%s exit\n", __func__);
+
+		dev_dbg(hy_drv_priv->dev, "%s exit1 {id:%x key:%x}\n", __func__,
+			 export_fd_attr->hid.id, export_fd_attr->hid.rng_key[0]);
 		return 0;
 	}
 
@@ -598,7 +602,9 @@ static int hyper_dmabuf_export_fd_ioctl(struct file *filp, void *data)
 
 	mutex_unlock(&hy_drv_priv->lock);
 
-	dev_dbg(hy_drv_priv->dev, "%s exit\n", __func__);
+	dev_dbg(hy_drv_priv->dev, "%s exit2 {id:%x key:%x}, r=%d\n", __func__,
+				export_fd_attr->hid.id, export_fd_attr->hid.rng_key[0],
+				imported->importers);
 	return ret;
 }
 
@@ -650,6 +656,12 @@ static void delayed_unexport(struct work_struct *work)
 	}
 
 	kfree(req);
+
+	dev_dbg(hy_drv_priv->dev,
+			"unexport message for buffer {id:%x key:%x %x %x} success\n",
+			exported->hid.id, exported->hid.rng_key[0],
+			exported->hid.rng_key[1], exported->hid.rng_key[2]);
+
 	exported->unexport_sched = false;
 
 	/* Immediately clean-up if it has never been exported by importer
