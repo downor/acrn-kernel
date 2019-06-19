@@ -235,8 +235,8 @@ static int hyper_dmabuf_export_remote_ioctl(struct file *filp, void *data)
 	 * to the same domain and if yes and it's valid sgt_info,
 	 * it returns hyper_dmabuf_id of pre-exported sgt_info
 	 */
-	hid = hyper_dmabuf_find_hid_exported(dma_buf,
-					     export_remote_attr->remote_domain);
+	hid = hyper_dmabuf_find_hid_dmabuf(dma_buf,
+					   export_remote_attr->remote_domain);
 
 	if (hid.id != -1) {
 		ret = fastpath_export(hid, export_remote_attr->sz_priv,
@@ -616,6 +616,7 @@ static void delayed_unexport(struct work_struct *work)
 	struct hyper_dmabuf_req *req;
 	struct hyper_dmabuf_bknd_ops *bknd_ops = hy_drv_priv->bknd_ops;
 	struct exported_sgt_info *exported;
+	hyper_dmabuf_id_t hid;
 	int op[4];
 	int i, ret;
 
@@ -624,18 +625,30 @@ static void delayed_unexport(struct work_struct *work)
 
 	exported = container_of(work, struct exported_sgt_info, unexport.work);
 
+	mutex_lock(&hy_drv_priv->lock);
+
 	dev_dbg(hy_drv_priv->dev,
-		"Marking buffer {id:%x key:%x %x %x} as invalid\n",
-		exported->hid.id, exported->hid.rng_key[0],
-		exported->hid.rng_key[1], exported->hid.rng_key[2]);
+		"delayed message for buffer started\n");
+
+	/* make sure if exported hasn't already been removed */
+	hid = hyper_dmabuf_find_hid_exported(exported);
+	if (hid.id == -1) {
+		mutex_unlock(&hy_drv_priv->lock);
+		return;
+	}
+	dev_dbg(hy_drv_priv->dev,
+		"delayed message2 for buffer {id:%x key:%x} started\n",
+		hid.id, hid.rng_key[0]);
 
 	/* no longer valid */
 	exported->valid = false;
 
 	req = kcalloc(1, sizeof(*req), GFP_KERNEL);
 
-	if (!req)
+	if (!req) {
+		mutex_unlock(&hy_drv_priv->lock);
 		return;
+	}
 
 	op[0] = exported->hid.id;
 
@@ -672,7 +685,7 @@ static void delayed_unexport(struct work_struct *work)
 	 */
 	if (exported->active == 0) {
 		dev_dbg(hy_drv_priv->dev,
-			"claning up buffer {id:%x key:%x %x %x} completly\n",
+			"clearing up buffer {id:%x key:%x %x %x} completely\n",
 			exported->hid.id, exported->hid.rng_key[0],
 			exported->hid.rng_key[1], exported->hid.rng_key[2]);
 
@@ -687,6 +700,8 @@ static void delayed_unexport(struct work_struct *work)
 
 		kfree(exported);
 	}
+
+	mutex_unlock(&hy_drv_priv->lock);
 }
 
 /* Schedule unexport of dmabuf.
@@ -699,6 +714,8 @@ int hyper_dmabuf_unexport_ioctl(struct file *filp, void *data)
 
 	dev_dbg(hy_drv_priv->dev, "%s entry\n", __func__);
 
+	mutex_lock(&hy_drv_priv->lock);
+
 	/* find dmabuf in export list */
 	exported = hyper_dmabuf_find_exported(unexport_attr->hid);
 
@@ -710,17 +727,21 @@ int hyper_dmabuf_unexport_ioctl(struct file *filp, void *data)
 	/* failed to find corresponding entry in export list */
 	if (exported == NULL) {
 		unexport_attr->status = -ENOENT;
+		mutex_unlock(&hy_drv_priv->lock);
 		return -ENOENT;
 	}
 
-	if (exported->unexport_sched)
+	if (exported->unexport_sched) {
+		mutex_unlock(&hy_drv_priv->lock);
 		return 0;
+	}
 
 	exported->unexport_sched = true;
 	INIT_DELAYED_WORK(&exported->unexport, delayed_unexport);
 	schedule_delayed_work(&exported->unexport,
 			      msecs_to_jiffies(unexport_attr->delay_ms));
 
+	mutex_unlock(&hy_drv_priv->lock);
 	dev_dbg(hy_drv_priv->dev, "%s exit\n", __func__);
 	return 0;
 }

@@ -199,7 +199,7 @@ struct exported_sgt_info *hyper_dmabuf_find_exported(hyper_dmabuf_id_t hid)
 }
 
 /* search for pre-exported sgt and return id of it if it exist */
-hyper_dmabuf_id_t hyper_dmabuf_find_hid_exported(struct dma_buf *dmabuf,
+hyper_dmabuf_id_t hyper_dmabuf_find_hid_dmabuf(struct dma_buf *dmabuf,
 						 int domid)
 {
 	struct list_entry_exported *info_entry;
@@ -209,6 +209,19 @@ hyper_dmabuf_id_t hyper_dmabuf_find_hid_exported(struct dma_buf *dmabuf,
 	hash_for_each(hyper_dmabuf_hash_exported, bkt, info_entry, node)
 		if (info_entry->exported->dma_buf == dmabuf &&
 		    info_entry->exported->rdomid == domid)
+			return info_entry->exported->hid;
+
+	return hid;
+}
+
+hyper_dmabuf_id_t hyper_dmabuf_find_hid_exported(struct exported_sgt_info *exported)
+{
+	struct list_entry_exported *info_entry;
+	hyper_dmabuf_id_t hid = {-1, {0, 0, 0} };
+	int bkt;
+
+	hash_for_each(hyper_dmabuf_hash_exported, bkt, info_entry, node)
+		if (info_entry->exported == exported)
 			return info_entry->exported->hid;
 
 	return hid;
@@ -227,6 +240,7 @@ hyper_dmabuf_id_t hyper_dmabuf_find_hid_imported(struct imported_sgt_info *impor
 
 	return hid;
 }
+
 
 struct imported_sgt_info *hyper_dmabuf_find_imported(hyper_dmabuf_id_t hid)
 {
